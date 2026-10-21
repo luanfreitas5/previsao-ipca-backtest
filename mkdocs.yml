@@ -1,0 +1,18 @@
+site_name: Previsão do IPCA com backtest walk-forward
+site_description: IPCA mensal, walk-forward sem vazamento temporal e comparação com o Focus.
+repo_url: https://github.com/luanfreitas5/previsao-ipca-backtest
+theme:
+  name: material
+  language: pt-BR
+nav:
+  - Início: index.md
+  - Metodologia: metodologia.md
+  - Referência da API: api.md
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: numpy
