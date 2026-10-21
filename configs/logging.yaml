@@ -1,0 +1,3 @@
+# Configuração de logging (console com rich + arquivo diário em logs/).
+level: INFO
+file_format: "%(asctime)s \t %(levelname)s \t %(name)s \t %(message)s"

@@ -1,0 +1,49 @@
+# Catálogo das séries do BCB/SGS e regras de disponibilidade (point-in-time).
+#
+# release_lag_days: dias entre o FIM do mês de referência e a divulgação do dado.
+#   available_at = fim_do_mês(período) + release_lag_days
+# Os atrasos são deliberadamente conservadores (nunca antes da divulgação real).
+#
+# aggregation: como séries diárias viram mensais (mean | last | sum).
+# transform: transformação aplicada ao valor mensal (level | pct_change | diff).
+#   Cada transformação usa apenas o mês e o anterior, então não cria informação futura.
+series:
+  - name: ipca
+    sgs_code: 433
+    frequency: monthly
+    aggregation: last
+    transform: level
+    release_lag_days: 10        # IBGE divulga ~dia 10 do mês seguinte
+    description: "IPCA - variação mensal (%)"
+
+  - name: igpm
+    sgs_code: 189
+    frequency: monthly
+    aggregation: last
+    transform: level
+    release_lag_days: 0         # FGV divulga o resultado do mês no fim do próprio mês
+    description: "IGP-M - variação mensal (%)"
+
+  - name: selic
+    sgs_code: 432
+    frequency: daily
+    aggregation: last
+    transform: level
+    release_lag_days: 0
+    description: "Meta Selic (% a.a.), último valor do mês"
+
+  - name: fx
+    sgs_code: 1
+    frequency: daily
+    aggregation: mean
+    transform: pct_change
+    release_lag_days: 0
+    description: "Dólar comercial (venda, R$/US$), média mensal; variação % mensal"
+
+  - name: ibcbr
+    sgs_code: 24364
+    frequency: monthly
+    aggregation: last
+    transform: pct_change
+    release_lag_days: 50        # BCB divulga ~45 dias após o fim do mês de referência
+    description: "IBC-Br dessazonalizado (índice); variação % mensal"

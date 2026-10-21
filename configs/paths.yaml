@@ -1,0 +1,8 @@
+# Caminhos relativos à raiz do projeto (resolvidos em config/settings.py).
+data_bronze: data/bronze
+data_silver: data/silver
+data_gold: data/gold
+reports: reports
+figures: reports/figures
+tables: reports/tables
+logs: logs

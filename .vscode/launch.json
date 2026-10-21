@@ -1,0 +1,33 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Pipeline: backtest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "args": ["backtest"],
+            "console": "integratedTerminal",
+            "env": { "PYTHONHASHSEED": "42" },
+            "justMyCode": true
+        },
+        {
+            "name": "Pipeline: ingest",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/src/main.py",
+            "args": ["ingest"],
+            "console": "integratedTerminal",
+            "justMyCode": true
+        },
+        {
+            "name": "Pytest: arquivo atual",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": ["${file}", "--no-cov", "-x"],
+            "console": "integratedTerminal",
+            "justMyCode": false
+        }
+    ]
+}
