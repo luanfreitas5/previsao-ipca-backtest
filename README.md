@@ -10,6 +10,10 @@ Previsão do **IPCA mensal** com backtest **walk-forward sem vazamento temporal*
 ao **Boletim Focus** do Banco Central, com testes estatísticos, intervalos conformais e
 rastreamento de experimentos.
 
+> **Resultado:** nenhum modelo superou o Focus. No horizonte de 1 mês o Focus tem RMSE 0,257
+> (IC 95%: 0,220–0,293) contra 0,334 do melhor modelo (AutoARIMA) e 0,412 do ingênuo
+> (Diebold-Mariano p < 0,001). Em 6 e 12 meses o AutoARIMA empata estatisticamente com o Focus.
+
 ## 🎯 Problema
 
 Avaliar modelos de previsão de inflação costuma ser enganoso: usar séries na versão final
@@ -78,16 +82,59 @@ xenon, interrogate, refurb) e `make check` (tudo, espelhando o CI).
 
 ## 📊 Resultados
 
-Os resultados são **gerados** pelo pipeline e dependem da data da coleta (o Focus e o IPCA são
-atualizados todo mês). Depois de `make report`, consulte:
+Protocolo: origens mensais de jan/2010 em diante, janela expansiva, reajuste a cada origem,
+amostra comum a todos os modelos e ao Focus (n = 200 origens em h=1; 189 em h=12). RMSE em
+pontos percentuais do IPCA mensal, com IC de 95% por bootstrap em blocos. Os números abaixo vêm de
+[`reports/relatorio_final.md`](reports/relatorio_final.md) (versão 0.1.0) e dependem da data da
+coleta, pois o Focus e o IPCA são atualizados todo mês.
 
-- [`reports/relatorio_final.md`](reports/relatorio_final.md) — tabelas, testes de Diebold-Mariano,
-  fatias por período e a seção **“Onde os modelos perdem para o Focus”**;
-- `reports/figures/` — RMSE por horizonte, previsto vs. realizado e cobertura conformal;
-- `reports/tables/` — as mesmas tabelas em CSV.
+### RMSE por horizonte
 
-> Nenhum número foi registrado neste README de propósito: ele só deve citar resultados que o
-> relatório gerado sustente.
+| Modelo | h=1 | h=2 | h=3 | h=6 | h=12 |
+|---|---|---|---|---|---|
+| **Focus** (referência) | **0,257** [0,220–0,293] | **0,322** [0,270–0,371] | **0,333** [0,274–0,389] | **0,351** [0,278–0,414] | **0,356** [0,267–0,443] |
+| AutoARIMA | 0,334 (×1,30) | 0,348 (×1,08) | 0,358 (×1,07) | 0,360 (×1,02) | 0,371 (×1,04) |
+| LightGBM | 0,363 (×1,42) | 0,371 (×1,15) | 0,371 (×1,11) | 0,391 (×1,11) | 0,424 (×1,19) |
+| AutoETS | 0,400 (×1,56) | 0,431 (×1,34) | 0,462 (×1,39) | 0,444 (×1,26) | 0,466 (×1,31) |
+| Ingênuo (último valor) | 0,412 (×1,60) | 0,461 (×1,43) | 0,503 (×1,51) | 0,509 (×1,45) | 0,482 (×1,36) |
+| Ingênuo sazonal | 0,438 (×1,70) | 0,438 (×1,36) | 0,439 (×1,32) | 0,442 (×1,26) | 0,499 (×1,40) |
+
+Entre parênteses, a razão do RMSE ao do Focus (> 1 = pior). IC dos demais modelos no relatório.
+
+### Principais achados
+
+- **O Focus vence em todos os horizontes.** Em h=1 a diferença é significativa para todos os
+  modelos (Diebold-Mariano com correção HLN, p < 0,001). O Focus incorpora informação que as séries
+  públicas usadas aqui não capturam.
+- **O AutoARIMA é o melhor modelo e a vantagem do Focus encolhe com o horizonte:** a razão cai de
+  1,30 (h=1) para 1,02–1,07 (h=3–12), e a diferença deixa de ser significativa em h=6 e h=12
+  (p = 0,65 e 0,44 na perda quadrática; 0,27 e 0,22 na absoluta). Em h=2 e h=3 o resultado
+  depende da perda (quadrática: p = 0,06 e 0,10; absoluta: p = 0,023 em ambos). Ausência de
+  significância com pontos autocorrelacionados não prova equivalência.
+- **LightGBM, AutoETS e os ingênuos perdem de forma significativa em todos os horizontes**
+  (LightGBM: p entre 0,010 e 0,038 em h≥2). O LightGBM não supera o AutoARIMA, apesar das
+  features adicionais (IGP-M, Selic, câmbio, IBC-Br).
+- **Choque de 2020–2022:** é o período de maior erro para todos. Nos horizontes
+  de 2 a 12 meses, o AutoARIMA tem RMSE menor que o do Focus nesse período (ex.: h=6, 0,543
+  contra 0,585), e o LightGBM também em h=3 e h=6. Em h=1 o Focus segue melhor. É uma comparação
+  descritiva em 36 origens, sem teste de significância.
+- **Maiores erros** do AutoARIMA concentram-se em jul/2022 (deflação de −0,68% após medidas sobre
+  combustíveis, previsto ≈ +0,5 a +0,7) e mar/2022 (+1,62%): choques de política e preços
+  administrados que nenhum modelo univariado antecipa.
+- **Cobertura conformal (nominal 90%) é insuficiente:** 0,77–0,89 observado conforme modelo e
+  horizonte (AutoARIMA: 0,84 em h=1 e 0,80 em h=12). Os intervalos subcobrem, o que é consistente com
+  a violação da trocabilidade em períodos de choque.
+
+### Artefatos
+
+- [`reports/relatorio_final.md`](reports/relatorio_final.md) — tabelas completas, testes de
+  Diebold-Mariano (perda quadrática e absoluta), fatias por subperíodo e **“Onde os modelos perdem
+  para o Focus”**;
+- [`reports/figures/`](reports/figures/) — RMSE por horizonte, previsto vs. realizado (h=1 e
+  h=12) e cobertura conformal;
+- [`reports/tables/`](reports/tables/) — as mesmas tabelas em CSV.
+
+![RMSE por horizonte](reports/figures/rmse_por_horizonte.png)
 
 ## ⚠️ Limitações
 
@@ -96,8 +143,9 @@ atualizados todo mês). Depois de `make report`, consulte:
   levemente otimista.
 - **Calendário de divulgação.** Os atrasos são aproximações conservadoras (constantes), não o
   calendário real de cada mês.
-- **Amostra curta.** Dezenas de observações por horizonte: leia sempre os ICs e os p-valores.
-  Horizontes longos têm erros muito autocorrelacionados (menos informação independente).
+- **Amostra curta.** ~190–200 origens por horizonte, mas com erros fortemente autocorrelacionados
+  (janelas sobrepostas), então a informação independente é bem menor; as fatias por subperíodo têm
+  36–71 origens. Leia sempre os ICs e os p-valores.
 - **Conformal.** A cobertura nominal assume resíduos trocáveis; choques (2020–2022) a violam.
 - **Focus.** Usa-se a mediana com `baseCalculo = 0` (últimos 30 dias); outras estatísticas
   ou janelas podem mudar o resultado.
