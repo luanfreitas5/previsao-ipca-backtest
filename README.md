@@ -1,4 +1,4 @@
-# 📈 Nenhum modelo supera o Boletim Focus na previsão do IPCA mensal (backtest walk-forward sem vazamento)
+# 📈 Previsão do IPCA com Backtest Walk-Forward: Nenhum modelo supera o Boletim Focus na previsão do IPCA mensal
 
 [![CI](https://github.com/luanfreitas5/previsao-ipca-backtest/actions/workflows/ci.yml/badge.svg)](https://github.com/luanfreitas5/previsao-ipca-backtest/actions/workflows/ci.yml)
 [![codecov](https://codecov.io/gh/luanfreitas5/previsao-ipca-backtest/graph/badge.svg)](https://codecov.io/gh/luanfreitas5/previsao-ipca-backtest)
