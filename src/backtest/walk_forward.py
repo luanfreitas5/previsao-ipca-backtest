@@ -19,6 +19,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
+from config.logging import CONSOLE
 from exceptions.data import LeakageError
 from models.base import ForecastContext, Forecaster
 from schemas.datasets import FORECASTS_SCHEMA, validate_dataframe
@@ -165,6 +166,7 @@ def run_walk_forward(
         TaskProgressColumn(),
         TimeElapsedColumn(),
         TimeRemainingColumn(),
+        console=CONSOLE,
         disable=not show_progress,
     )
     with progress:

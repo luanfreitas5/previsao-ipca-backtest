@@ -57,6 +57,9 @@ dependencies = [
 # sem o prefixo `src.`). O pytest resolve por `pythonpath = ["src"]` e o
 # `python src/main.py` coloca `src/` em sys.path automaticamente.
 package = false
+# Os workflows rodam `uv sync --dev`: manter os três grupos como padrão preserva o CI.
+# Imagem Docker usa `--no-default-groups` para ficar só com o runtime.
+default-groups = ["dev", "quality", "docs"]
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
     "sys_platform == 'linux' and platform_machine == 'x86_64'",
@@ -67,40 +70,41 @@ Homepage = "https://github.com/luanfreitas5/previsao-ipca-backtest"
 Documentation = "https://luanfreitas5.github.io/previsao-ipca-backtest/"
 Repository = "https://github.com/luanfreitas5/previsao-ipca-backtest"
 
-# --- Dependências de desenvolvimento (não publicadas; PEP 735) --------------
+# --- Grupos de dependências (PEP 735): runtime limpo, ferramentas separadas por finalidade ---
 [dependency-groups]
 dev = [
     # Lint + format
     "ruff>=0.5",
     # Type checking (roda no CI, não no pre-commit)
     "basedpyright>=1.13",
-    # Segurança (roda no CI)
-    "bandit>=1.7",
-    "pip-audit>=2.7",
-    "detect-secrets>=1.5",
-    # Qualidade / complexidade / docstrings
-    "vulture>=2.11",
-    "refurb>=2.0",
-    "xenon>=0.9",
-    "radon>=6.0",
-    "interrogate>=1.7",
     # Testes
     "pytest>=8.2",
     "pytest-cov>=5.0",
     "hypothesis>=6.100",
+    # Workflow
+    "pre-commit>=3.7",
+    "commitizen>=4.0",
+    "detect-secrets>=1.5",
     # Notebooks
     "nbqa>=1.8",
     "nbstripout>=0.7",
     "ipykernel>=6.29",
     "jupyterlab>=4.2",
-    # Workflow
-    "pre-commit>=3.7",
-    "commitizen>=4.0",
-    # Documentação
-    "mkdocs-material>=9.5",
-    "mkdocstrings[python]>=0.25",
     # Profiling (sob demanda)
     "scalene>=1.5",
+]
+quality = [  # checagens pesadas: CI e `make quality`
+    "bandit>=1.7",
+    "pip-audit>=2.7",
+    "vulture>=2.11",
+    "refurb>=2.0",
+    "xenon>=0.9",
+    "radon>=6.0",
+    "interrogate>=1.7",
+]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocstrings[python]>=0.25",
 ]
 
 # =============================================================================

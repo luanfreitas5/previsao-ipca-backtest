@@ -6,8 +6,9 @@ paths
     Constantes ``ROOT`` e ``CONFIG_DIR``.
 settings
     ``Settings`` e ``load_settings`` (carrega e valida ``configs/*.yaml`` e ``.env``).
-logging_setup
-    ``configure_logging`` (console com rich + arquivo diário).
+logging
+    ``configure_logging`` (``dictConfig`` de ``configs/logging.yaml``: console rich + arquivo)
+    e ``CONSOLE`` (console compartilhado com as barras de progresso).
 environment
     ``seed_everything`` (fixa todas as fontes de aleatoriedade).
 """

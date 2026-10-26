@@ -1,41 +1,42 @@
 # --- Configuração ----------------------------------------------------------
-# 'src' vira raiz do path ao rodar o script
-RUN := uv run python src/main.py
+# `python src/main.py` coloca 'src' na raiz do sys.path
+UV := uv
+RUN := $(UV) run python src/main.py
+IMAGE ?= previsao-ipca-backtest:dev
 
 # PYTHONHASHSEED precisa ser exportado ANTES do interpretador iniciar.
 export PYTHONHASHSEED := 42
 
 .DEFAULT_GOAL := help
-.PHONY: help init venv install update lock export \
-	lint typecheck security deadcode complexity docstrings modernize quality check \
+.PHONY: help init install venv update lock export \
+	lint format typecheck security quality check \
 	test smoke test-all coverage hooks pre-commit update-hooks release \
 	docs docs-serve docs-deploy profile clean cache jupyter add remove tree \
-	ingest silver gold backtest report pipeline \
-	clean-gold clean-reports clean-outputs mlflow
+	ingest silver gold backtest report pipeline train reproduce \
+	clean-gold clean-reports clean-outputs mlflow docker-build docker-run
 
 help:  ## Lista os alvos disponíveis
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
 		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
-init:  ## Inicializa o projeto (instala dependências + hooks)
-	$(MAKE) install
-	$(MAKE) hooks
+install:  ## Instala todos os grupos de dependências e os hooks do pre-commit
+	$(UV) sync --all-groups
+	$(UV) run pre-commit install --hook-type pre-commit --hook-type commit-msg
+
+init: install  ## Alias de install
 
 venv:  ## Cria o ambiente virtual (requer: uv)
-	uv venv
-
-install:  ## Instala dependências (runtime + dev)
-	uv sync --dev
+	$(UV) venv
 
 update:  ## Atualiza todas as dependências e sincroniza
-	uv lock --upgrade
-	uv sync --all-groups
+	$(UV) lock --upgrade
+	$(UV) sync --all-groups
 
 lock:  ## Gera/atualiza o uv.lock
-	uv lock
+	$(UV) lock
 
 export:  ## Exporta requirements.txt (para quem usa pip)
-	uv export --no-hashes -o requirements.txt
+	$(UV) export --locked --no-dev --no-hashes -o requirements.txt
 
 # --- Pipeline ---------------------------------------------------------------
 ingest:  ## Baixa SGS + Focus para data/bronze (idempotente; FORCE=1 refaz o snapshot do dia)
@@ -56,61 +57,60 @@ report:  ## Gera tabelas, figuras e reports/relatorio_final.md
 pipeline:  ## Executa o fluxo completo: ingest -> silver -> gold -> backtest -> report
 	$(RUN) all
 
-# --- Qualidade -------------------------------------------------------------
-lint:  ## Lint com ruff (format + check --fix)
-	uv run ruff format .
-	uv run ruff check --fix .
+train: backtest  ## Alias de backtest (etapa que ajusta e avalia os modelos)
+
+reproduce: pipeline  ## Reproduz o resultado do zero (sem DVC: o pipeline é o DAG)
+
+# --- Qualidade (CI e `make check`) -------------------------------------------
+lint:  ## Lint e formatação (somente verifica; use `make format` para corrigir)
+	$(UV) run ruff check src tests
+	$(UV) run ruff format --check src tests
+
+format:  ## Corrige lint e formata o código
+	$(UV) run ruff check --fix src tests
+	$(UV) run ruff format src tests
 
 typecheck:  ## Type checking estático (basedPyright)
-	uv run basedpyright
+	$(UV) run basedpyright
 
 security:  ## Análise de segurança (bandit + pip-audit)
-	uv run bandit -r src -c pyproject.toml
-	uv run pip-audit
+	$(UV) run bandit -c pyproject.toml -r src
+	$(UV) run pip-audit
 
-deadcode:  ## Detecta código morto (vulture)
-	uv run vulture src
+quality:  ## Código morto, modernização, complexidade e docstrings
+	$(UV) run vulture
+	$(UV) run refurb src
+	$(UV) run xenon --max-absolute B --max-modules A --max-average A src
+	$(UV) run interrogate -v src
 
-complexity:  ## Limites de complexidade (xenon)
-	uv run xenon --max-absolute B --max-modules A --max-average A src
-
-docstrings:  ## Cobertura de docstrings (interrogate)
-	uv run interrogate -v src
-
-modernize:  ## Sugestões de modernização (refurb)
-	uv run refurb src
-
-quality: lint typecheck security deadcode complexity docstrings modernize  ## Suíte de qualidade completa
-
-check: quality test  ## Roda localmente o mesmo que o CI (qualidade + testes)
+check: lint typecheck security quality test  ## Replica o CI localmente
 
 # --- Testes ----------------------------------------------------------------
 test:  ## Roda os testes com cobertura (sem os lentos)
-	uv run pytest -m "not slow"
+	$(UV) run pytest -m "not slow"
 
 smoke:  ## Roda apenas os smoke tests
-	uv run pytest -m smoke -q --no-cov
+	$(UV) run pytest -m smoke -q --no-cov
 
 test-all:  ## Roda a suíte completa, inclusive os testes lentos
-	uv run pytest
+	$(UV) run pytest
 
 coverage:  ## Gera o relatório de cobertura em HTML
-	uv run pytest -m "not slow" --cov-report=html
+	$(UV) run pytest -m "not slow" --cov-report=html
 	@echo "Relatório disponível em htmlcov/index.html"
 
-hooks:  ## Instala os hooks do pre-commit
-	uv run pre-commit install
-	uv run pre-commit install --hook-type commit-msg
-	uv run detect-secrets scan > .secrets.baseline
+hooks:  ## Instala os hooks do pre-commit (o baseline de segredos já é versionado)
+	$(UV) run pre-commit install --hook-type pre-commit --hook-type commit-msg
+	$(UV) run detect-secrets scan > .secrets.baseline
 
 pre-commit:  ## Roda todos os hooks do pre-commit em todos os arquivos
-	uv run pre-commit run --all-files
+	$(UV) run pre-commit run --all-files
 
 update-hooks:  ## Atualiza as versões dos hooks do pre-commit
-	uv run pre-commit autoupdate
+	$(UV) run pre-commit autoupdate
 
 release:  ## Cria uma nova release (versão + changelog + tag)
-	uv run cz bump --changelog
+	$(UV) run cz bump --changelog
 
 # --- Limpeza (a camada bronze nunca é apagada) -------------------------------
 clean-gold:  ## Remove os dados derivados da camada gold
@@ -126,33 +126,40 @@ clean:  ## Remove caches e artefatos temporários
 	find . -type d -name __pycache__ -not -path "./.venv/*" -exec rm -rf {} +
 
 cache:  ## Limpa o cache do uv
-	uv cache clean
+	$(UV) cache clean
 
 # --- Documentação ----------------------------------------------------------
 docs:  ## Constrói a documentação (modo estrito)
-	uv run mkdocs build --strict
+	$(UV) run mkdocs build --strict
 
 docs-serve:  ## Servidor local da documentação
-	uv run mkdocs serve
+	$(UV) run mkdocs serve
 
 docs-deploy:  ## Publica a documentação no GitHub Pages
-	uv run mkdocs gh-deploy --force
+	$(UV) run mkdocs gh-deploy --force
 
 # --- Utilitários -----------------------------------------------------------
 profile:  ## Profiling com scalene
-	uv run scalene src/main.py backtest
+	$(UV) run scalene src/main.py backtest
 
 jupyter:  ## Abre o JupyterLab
-	uv run jupyter lab
+	$(UV) run jupyter lab
+
+docker-build:  ## Constrói a imagem do pipeline (código + dependências travadas)
+	docker build -t $(IMAGE) .
+
+docker-run:  ## Roda um estágio no contêiner: make docker-run STAGE=backtest
+	docker run --rm -v "$(CURDIR)/data:/app/data" -v "$(CURDIR)/reports:/app/reports" \
+		-v "$(CURDIR)/mlruns:/app/mlruns" $(IMAGE) $(or $(STAGE),all)
 
 mlflow:  ## Sobe a interface do MLflow (http://localhost:5000)
-	uv run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
+	$(UV) run mlflow ui --backend-store-uri sqlite:///mlruns/mlflow.db
 
 add:  ## Adiciona dependência: make add PKG=nome
-	uv add $(PKG)
+	$(UV) add $(PKG)
 
 remove:  ## Remove dependência: make remove PKG=nome
-	uv remove $(PKG)
+	$(UV) remove $(PKG)
 
 tree:  ## Árvore de dependências
-	uv tree
+	$(UV) tree

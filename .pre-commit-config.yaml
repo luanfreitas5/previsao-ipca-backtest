@@ -1,12 +1,11 @@
 # =============================================================================
-# .pre-commit-config.yaml — apenas checagens RÁPIDAS, para não criar atrito no
-# commit. Type checking (basedPyright), segurança (bandit) e complexidade
-# (xenon/radon) rodam no CI, conforme o CLAUDE.md.
+# .pre-commit-config.yaml — apenas verificações RÁPIDAS. Checagens pesadas (tipos,
+# segurança, complexidade, suíte completa) rodam no CI e em `make check`.
 #
-# Setup:
-#   uv run pre-commit install
-#   uv run pre-commit install --hook-type commit-msg   # ativa o commitizen
-#   uv run detect-secrets scan > .secrets.baseline      # gera o baseline
+# Setup (feito por `make install`):
+#   uv run pre-commit install --hook-type pre-commit --hook-type commit-msg
+# Após editar: `uv run pre-commit autoupdate`.
+# Baseline de segredos (já versionado): `uv run detect-secrets scan > .secrets.baseline`
 # =============================================================================
 
 default_install_hook_types: [pre-commit, commit-msg]
@@ -63,4 +62,4 @@ repos:
         entry: uv run pytest -m smoke -q --no-cov
         language: system
         pass_filenames: false
-        stages: [pre-commit]
+        types: [python]

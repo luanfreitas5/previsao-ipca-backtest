@@ -7,7 +7,7 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from config.environment import seed_everything
-from config.logging_setup import configure_logging
+from config.logging import configure_logging
 from config.paths import CONFIG_DIR
 from config.settings import Settings, load_settings
 from exceptions.base import IpcaBacktestError
@@ -65,12 +65,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     """
     args = build_parser().parse_args(argv)
     try:
+        configure_logging(args.log_level)
         settings = load_settings(args.config_dir)
-        configure_logging(
-            args.log_level or settings.logging.level,
-            settings.paths.logs,
-            settings.logging.file_format,
-        )
         seed_everything(settings.random_seed)
         if args.stage in ("ingest", "all"):
             run_ingest(settings, args.force)

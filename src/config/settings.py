@@ -126,13 +126,6 @@ class ModelParams(_Strict):
     lightgbm: LightGBMParams
 
 
-class LoggingConfig(_Strict):
-    """Configuração de logging."""
-
-    level: str
-    file_format: str
-
-
 class PathsConfig(_Strict):
     """Caminhos absolutos (já resolvidos a partir da raiz do projeto)."""
 
@@ -165,7 +158,6 @@ class Settings(_Strict):
     mlflow: MlflowConfig
     series: list[SeriesConfig]
     model_params: ModelParams
-    logging: LoggingConfig
     paths: PathsConfig
 
     @property
@@ -237,7 +229,6 @@ def load_settings(config_dir: Path = CONFIG_DIR, root: Path = ROOT) -> Settings:
             | {
                 "series": read_yaml(config_dir / "series.yaml")["series"],
                 "model_params": read_yaml(config_dir / "model_params.yaml"),
-                "logging": read_yaml(config_dir / "logging.yaml"),
                 "paths": {key: root / value for key, value in raw_paths.items()},
             }
         )
